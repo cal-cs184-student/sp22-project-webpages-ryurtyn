@@ -34,368 +34,437 @@
 
   <br><br>
 
-  <div>
+      <div>
 
-    <h2 align="middle">Overview</h2>
-    <p></p>
+          <h2 align="middle">Overview</h2>
+          <p></p>
 
-    <h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
+          <h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
 
-    <h3 align="middle">Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
+          <h3 align="middle">Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
 
-    <p>
-        In the first section of this project, we focused on finding Bezier curves in 2D space. de Casteljau's
-        algorithm recursively runs linear interpolation between each line segment (i, i+1) on the given control points.
-        It uses a parameter t to determine where on the line the intermediate control point should be drawn.
-        By doing this, it creates n - 1 control points at each step. When run recursively,
-        it will eventually reach a point where there exists just one control point, which is directly on the bezier curve.
-    </p>
+          <p>
+              In the first section of this project, we focused on finding Bezier curves in 2D space. de Casteljau's
+              algorithm recursively runs linear interpolation between each line segment (i, i+1) on the given control points.
+              It uses a parameter t to determine where on the line the intermediate control point should be drawn.
+              By doing this, it creates n - 1 control points at each step. When run recursively,
+              it will eventually reach a point where there exists just one control point, which is directly on the bezier curve.
+          </p>
 
-    <p> The entirety of the code we wrote for this part of the project is within BezierCurve::evaluateStep, which
-      evaluates exactly one recursive step of the algorithm. The recursive call structure is handled by preexisting skeleton code.</p>
+          <p>
+              The entirety of the code we wrote for this part of the project is within BezierCurve::evaluateStep, which
+              evaluates exactly one recursive step of the algorithm. The recursive call structure is handled by preexisting skeleton code.
+          </p>
 
-    <p><b>The images below show the progression of each step of this algorithm. In the final step, you can see the
-    green line which represents the completed Bezier curve. The final image shows another Bezier curve starting with slightly
-    different starting points, and with the t value at a different spot. </b></p>
+          <p>
+              <b>
+                  The images below show the progression of each step of this algorithm. In the final step, you can see the
+                  green line which represents the completed Bezier curve. The final image shows another Bezier curve starting with slightly
+                  different starting points, and with the t value at a different spot.
+              </b>
+          </p>
 
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/task1/image1.png" align="middle" width="400px" />
-            <figcaption align="middle">Original Points</figcaption>
-          </td>
-          <td>
-            <img src="images/task1/image2.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 1</figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="images/task1/image3.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 2</figcaption>
-          </td>
-          <td>
-            <img src="images/task1/image4.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 3</figcaption>
-          </td>
-        </tr>
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task1/image1.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original Points</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task1/image2.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 1</figcaption>
+                      </td>
+                  </tr>
+                  <br />
+                  <tr>
+                      <td>
+                          <img src="images/task1/image3.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 2</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task1/image4.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 3</figcaption>
+                      </td>
+                  </tr>
 
-        <tr>
-          <td>
-            <img src="images/task1/image5.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 4</figcaption>
-          </td>
-          <td>
-            <img src="images/task1/image6.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 5</figcaption>
-          </td>
-        </tr>
-        <br>
-        <tr>
-          <td>
-            <img src="images/task1/image7.png" align="middle" width="400px" />
-            <figcaption align="middle">Completed Curve</figcaption>
-          </td>
-          <td>
-            <img src="images/task1/image8.png" align="middle" width="400px" />
-            <figcaption align="middle">Another Curve & t value</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
-
-
-    <h3 align="middle">Part 2: Bezier surfaces with separable 1D de Casteljau subdivision</h3>
-
-    <p> The algorithm for part 2 is an extension of the algorithm for part 1. Here, instead of interpolating to find a single curve
-      over all the control points on one plane, we find the Bezier Curve over each of the n "rows" of the input points, because we know each of the
-      rows exist on a single plane. We do this by running the same algorithm from part 1 but with u as the parameter for each row of the inputs. Then, we
-      can find the Bezier Curve that lies on the points returned by finding the Bezier curves of each of the rows, with the parameter v. This second part
-      effectively runs the algorithm on the second axis. This returns a single point that we say is on the Bezier surface of the inputs for parameters u and v.</p>
-
-    <p> Implementation-wise, we noted that instead of having to only implement one recursive step like in part 1, we had to implement 3 separate functions that
-      organized the recursive structure. At the highest level, we had BezierPatch::evaluate, which takes in as arguments two paramters u and v, and has access internally
-      to a set of control points on which to run the algorithm. In this function, we organize the high level structure of the algorithm, which means we loop through each
-      row of control points and run 1D evaluation to find their Bezier curves. We make sure to store a point on each of these Bezier curves. Finally, we can run 1D evaluation
-      on the vector of points collected by running 1D evaluation N times, which returns the point on the Bezier surface.</p>
-
-      <p> For BezierPatch::evaluate1D, we iteratively update a vector of intermediate points by running a single function call on them until we have just one point remaining.
-      Since each call to BezierPatch::evaluateStep returns a vector with one less point than its input, we know we will eventually find a single point that lies on the Bezier
-      Curve of the control points given the parameter. BezierPatch::evaluateStep is simple and similar to part one, in which it iterates through each of the points passed into it
-      and returns a vector with the points found by interpolating at each line segment given the parameter.</p>
-
-      <p><b>The image below shows the generated Bezier surface for teapot.bez</b></p>
-
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/task2/image1.png" align="middle" width="400px" />
-            <figcaption align="middle">Generated Bezier Surface</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
+                  <tr>
+                      <td>
+                          <img src="images/task1/image5.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 4</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task1/image6.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 5</figcaption>
+                      </td>
+                  </tr>
+                  <br />
+                  <tr>
+                      <td>
+                          <img src="images/task1/image7.png" align="middle" width="400px" />
+                          <figcaption align="middle">Completed Curve</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task1/image8.png" align="middle" width="400px" />
+                          <figcaption align="middle">Another Curve & t value</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
 
 
-    <h2 align="middle">Section II: Sampling</h2>
+          <h3 align="middle">Part 2: Bezier surfaces with separable 1D de Casteljau subdivision</h3>
 
-    <h3 align="middle">Part 3: Average normals for half-edge meshes</h3>
+          <p>
+              The algorithm for part 2 is an extension of the algorithm for part 1. Here, instead of interpolating to find a single curve
+              over all the control points on one plane, we find the Bezier Curve over each of the n "rows" of the input points, because we know each of the
+              rows exist on a single plane. We do this by running the same algorithm from part 1 but with u as the parameter for each row of the inputs. Then, we
+              can find the Bezier Curve that lies on the points returned by finding the Bezier curves of each of the rows, with the parameter v. This second part
+              effectively runs the algorithm on the second axis. This returns a single point that we say is on the Bezier surface of the inputs for parameters u and v.
+          </p>
 
-    <p> In this part of the project we are finally starting to work with the HalfEdgeMesh data structure, which as we learned in lecture is one of the more
-      efficient ways to keep track of massive polygon (specifically triangle) meshes. The idea is to be able to traverse through the data structure through a sequence
-      of references to and from half-edges instead of storing a large amount of data explicitly saying where vertices and edges lie. This means all elements of the mesh, including
-      faces, edges, and vertices, reference only one of their corresponding half-edges (and position for vertex). Given this, our challenge in part 3 is to write an algorithm
-      that given any vertex on a mesh, returns the area-weighted normals of the point. It does this by taking the area-weighted average of each of the faces surrounding it
-      and normalizing. We specifically implemented this by iterating over the faces surrounding the internal vertex, finding the normal of each face, multiplying it by the area of the face,
-      and adding it to a running sum. Once we've done this for all faces, we normalize the sum vector and return it.</p>
+          <p>
+              Implementation-wise, we noted that instead of having to only implement one recursive step like in part 1, we had to implement 3 separate functions that
+              organized the recursive structure. At the highest level, we had BezierPatch::evaluate, which takes in as arguments two paramters u and v, and has access internally
+              to a set of control points on which to run the algorithm. In this function, we organize the high level structure of the algorithm, which means we loop through each
+              row of control points and run 1D evaluation to find their Bezier curves. We make sure to store a point on each of these Bezier curves. Finally, we can run 1D evaluation
+              on the vector of points collected by running 1D evaluation N times, which returns the point on the Bezier surface.
+          </p>
 
-      <p><b>The images below demonstrate this smoothing effect. The first image is the original image, and the second is the
-      image with area-weighted vertex normals. </b></p>
+          <p>
+              For BezierPatch::evaluate1D, we iteratively update a vector of intermediate points by running a single function call on them until we have just one point remaining.
+              Since each call to BezierPatch::evaluateStep returns a vector with one less point than its input, we know we will eventually find a single point that lies on the Bezier
+              Curve of the control points given the parameter. BezierPatch::evaluateStep is simple and similar to part one, in which it iterates through each of the points passed into it
+              and returns a vector with the points found by interpolating at each line segment given the parameter.
+          </p>
 
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/task3/image1.png" align="middle" width="400px" />
-            <figcaption align="middle">Original Teapot</figcaption>
-          </td>
-          <td>
-            <img src="images/task3/image2.png" align="middle" width="400px" />
-            <figcaption align="middle">Smooth Area-Weighted Teapot</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
+          <p><b>The image below shows the generated Bezier surface for teapot.bez</b></p>
 
-
-    <h3 align="middle">Part 4: Half-edge flip</h3>
-
-    <p> In part 4 we continue working with the HalfEdgeMesh data structure. Here we want to implement halfedge flip as defined in lecture. Furthermore, we've been provided in
-      the spec an order in which we are recommended to do all the pointer reassignments. As suggested by the spec, we were sure to define the halfedge pointer for every relevant
-      element in the mesh, not just those that change values during the halfedge flip. Seeing that this entire algorithm is just a sequence of constant time pointer operations, we 
-      first drew the following diagram to keep track of which mesh elements correspond to which variables in the flip.
-    </p>
-
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/image1.png" align="middle" width="400px" />
-            <figcaption align="middle">Guiding Figure For Edge Flip</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
-
-    <p>
-      Then, we simply redefined each of them to match our diagram.
-      At first, we ran into a bit of trouble with a segfault upon attempting an edge flip, which we discovered through some print line debugging was because we were dereferencing some
-      pointers before using them. Once we fixed our code to work exclusively with Iters, it worked! We then cleaned up the code by adding intermediate variables, made sure everything worked,
-      and moved on to the next part.</p>
-
-    <p><b>One interesting thing that happened, is that while our initial implementation worked for our manual edge flipping, it
-    didn't work correctly for Task 6. We ended up coming back to this task to restructure it. After some restructuring, and checking
-    that all the variables were referencing the correct values, our implementation began to work correctly. </b></p>
-
-      <p><b>The images below show the teapot after 1, or several edge flips. </b></p>
-
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/task4/image1.png" align="middle" width="400px" />
-            <figcaption align="middle">Original Teapot</figcaption>
-          </td>
-          <td>
-            <img src="images/task4/image2.png" align="middle" width="400px" />
-            <figcaption align="middle">1 Edge Flip</figcaption>
-          </td>
-          <td>
-            <img src="images/task4/image3.png" align="middle" width="400px" />
-            <figcaption align="middle">Several Edges Flipped</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task2/image1.png" align="middle" width="400px" />
+                          <figcaption align="middle">Generated Bezier Surface</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
 
 
-    <h3 align="middle">Part 5: Half-edge split</h3>
+          <h2 align="middle">Section II: Sampling</h2>
 
-      <p> We went about implementing edge split very similarly to edge flip. One again, we started with a diagram that defined each of the variables in our mesh, and a diagram that
-      showed the resultant pointers, with a list of new variables that we needed to create.
-        </p>
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/image2.png" align="middle" width="400px" />
-            <figcaption align="middle">Guiding Figure For Edge Flip</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
+          <h3 align="middle">Part 3: Average normals for half-edge meshes</h3>
 
-    <p>Once we did this, we started by going through each of the preexisting variables and defining then with reference
-      to the relevant half edges. As with the last part, we avoided running on any inputs that were on the boundary.
-      This time, when we created new variables, we
-      also made sure to set their other fields, such as position for vertex, and isNew for edge. We came back while doing part 6 to set isNew to true for the edges we wanted to consider "new"
-      in loop subdivision. Finally, we once again set the neighbors for each of the halfedges, set the halfedges for each of the mesh elements, and returned the new vertex.</p>
+          <p>
+              In this part of the project we are finally starting to work with the HalfEdgeMesh data structure, which as we learned in lecture is one of the more
+              efficient ways to keep track of massive polygon (specifically triangle) meshes. The idea is to be able to traverse through the data structure through a sequence
+              of references to and from half-edges instead of storing a large amount of data explicitly saying where vertices and edges lie. This means all elements of the mesh, including
+              faces, edges, and vertices, reference only one of their corresponding half-edges (and position for vertex). Given this, our challenge in part 3 is to write an algorithm
+              that given any vertex on a mesh, returns the area-weighted normals of the point. It does this by taking the area-weighted average of each of the faces surrounding it
+              and normalizing. We specifically implemented this by iterating over the faces surrounding the internal vertex, finding the normal of each face, multiplying it by the area of the face,
+              and adding it to a running sum. Once we've done this for all faces, we normalize the sum vector and return it.
+          </p>
 
-      <p><b>The images below show the teapot with some edge splits, as well as some combinations of splits and flips.</b></p>
+          <p>
+              <b>
+                  The images below demonstrate this smoothing effect. The first image is the original image, and the second is the
+                  image with area-weighted vertex normals.
+              </b>
+          </p>
 
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/task5/image1.png" align="middle" width="400px" />
-            <figcaption align="middle">Original Teapot</figcaption>
-          </td>
-          <td>
-            <img src="images/task5/image2.png" align="middle" width="400px" />
-            <figcaption align="middle">Some Edge Splits</figcaption>
-          </td>
-          <td>
-            <img src="images/task5/image3.png" align="middle" width="400px" />
-            <figcaption align="middle">Edge Splits and Flips</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
-
-    <h3 align="middle">Part 6: Loop subdivision for mesh upsampling</h3>
-
-      <p>Finally, we implemented loop subdivision for mesh upsampling. As discussed in lecture, this is an efficient way to make meshes higher resolution without doing an unscalable
-      amount of operations on the mesh. We implemented it following along very closely to the instructions in the spec. First, we looped over all vertices of the mesh and computed
-      their new positions using the vertex degree, current position, and centroid. We stored this value in each vertex's "newPosition" field. Next, as said in the spec, we looped
-      over all edges in the mesh and calculated each edge's "newPosition" field, populating these altered edges in a new vector. We now go through each of these edges in the mesh
-      and split them, storing the new position in the vertex returned, while keeping track of new edges through splitEdge. Importantly, we looped through only the edges in the original mesh.
-      At first, we looped through all the edges, which led to an infinite loop, because we would continually split edges we had already split. Finally, we flipped any edge that connected an old
-      and new vertex, which we had set through isNew, and copied the new vertex positions into the proper position field for each vertex in the mesh. </p>
-
-    <p><b>The images below show an object over several iterations of subdivision. Notice that the edges of the object become more rounded
-    as we subdivide more. This technique essentially smooths out the irregularities, which is good for a smooth look, but can
-    make boundaries and sharp edges less defined in some cases. We explore how to fix this using the cube model.</b></p>
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task3/image1.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original Teapot</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task3/image2.png" align="middle" width="400px" />
+                          <figcaption align="middle">Smooth Area-Weighted Teapot</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
 
 
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/task6/image13.png" align="middle" width="400px" />
-            <figcaption align="middle">Original Object</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image14.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 1</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image15.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 2</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
+          <h3 align="middle">Part 4: Half-edge flip</h3>
 
-    <p><b>The images below show the cube after several iterations of subdivision. Notice that even after the first iteration, the cube doesn't
-    look like a cube anymore and takes on a deformed and asymmetric shape.</b></p>
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/task6/image1.png" align="middle" width="400px" />
-            <figcaption align="middle">Original Cube</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image2.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 1</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image3.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 2</figcaption>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <img src="images/task6/image4.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 3</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image5.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 4</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image6.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 5</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
+          <p>
+              In part 4 we continue working with the HalfEdgeMesh data structure. Here we want to implement halfedge flip as defined in lecture. Furthermore, we've been provided in
+              the spec an order in which we are recommended to do all the pointer reassignments. As suggested by the spec, we were sure to define the halfedge pointer for every relevant
+              element in the mesh, not just those that change values during the halfedge flip. Seeing that this entire algorithm is just a sequence of constant time pointer operations, we
+              first drew the following diagram to keep track of which mesh elements correspond to which variables in the flip.
+          </p>
 
-    <p><b>We can make this cube more symmetric by preprocessing some of the edges. More specifically, we can split any diagonal
-    edge on the face of the cube as shown in the image below. Notice that as we perform subdivision with these changes,
-    the cube keeps its cube shape and splits more symmetrically. </b></p>
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/task6/image7.png" align="middle" width="400px" />
-            <figcaption align="middle">Original Cube</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image8.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 1</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image9.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 2</figcaption>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <img src="images/task6/image10.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 3</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image11.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 4</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image12.png" align="middle" width="400px" />
-            <figcaption align="middle">Iteration 5</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/image1.png" align="middle" width="400px" />
+                          <figcaption align="middle">Guiding Figure For Edge Flip</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
 
-    <p> We had quite a debugging journey for this task. At first, it seemed as though the code was stuck in an infinite loop, but
-    after adding some print statements, the code was indeed reaching the end of the function. This was very puzzling because
-    It didn't actually seem to get stuck in any loops, but also wasn't throwing a segfault either. To fix this issue, we went
-    back to tasks 4 and 5 to restructure the code a bit. This helped prevent any variables from being assigned to nonexisting values.
-    After that, we still had some issues. The first issue we dealt with was that the values for the new coordinate points were
-    all being set to {0,0}. After some debugging, we made sure that we were setting the new coordinate values at the correct time and place.
-    The second issue we dealt with was that some of the faces were disappearing. It turns out that this was an issue in the split edge function
-    and that some of the faces weren't being set correctly in the code. After fixing this, our result looked correct! Samples of these errors are shown
-    in the photos below. </p>
+          <p>
+              Then, we simply redefined each of them to match our diagram.
+              At first, we ran into a bit of trouble with a segfault upon attempting an edge flip, which we discovered through some print line debugging was because we were dereferencing some
+              pointers before using them. Once we fixed our code to work exclusively with Iters, it worked! We then cleaned up the code by adding intermediate variables, made sure everything worked,
+              and moved on to the next part.
+          </p>
 
-    <div align="middle">
-      <table style="width=100%">
-        <tr>
-          <td>
-            <img src="images/task6/image16.png" align="middle" width="400px" />
-            <figcaption align="middle">Error New Coordinates</figcaption>
-          </td>
-          <td>
-            <img src="images/task6/image17.png" align="middle" width="400px" />
-            <figcaption align="middle">Holy Cow!</figcaption>
-          </td>
-        </tr>
-      </table>
-    </div>
-    <p>https://cal-cs184-student.github.io/sp22-project-webpages-ryurtyn/proj2/index.html</p>
+          <p>
+              <b>
+                  One interesting thing that happened, is that while our initial implementation worked for our manual edge flipping, it
+                  didn't work correctly for Task 6. We ended up coming back to this task to restructure it. After some restructuring, and checking
+                  that all the variables were referencing the correct values, our implementation began to work correctly.
+              </b>
+          </p>
 
-</body>
+          <p><b>The images below show the teapot after 1, or several edge flips. </b></p>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task4/image1.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original Teapot</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task4/image2.png" align="middle" width="400px" />
+                          <figcaption align="middle">1 Edge Flip</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task4/image3.png" align="middle" width="400px" />
+                          <figcaption align="middle">Several Edges Flipped</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+
+          <h3 align="middle">Part 5: Half-edge split</h3>
+
+          <p>
+              We went about implementing edge split very similarly to edge flip. One again, we started with a diagram that defined each of the variables in our mesh, and a diagram that
+              showed the resultant pointers, with a list of new variables that we needed to create.
+          </p>
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/image2.png" align="middle" width="400px" />
+                          <figcaption align="middle">Guiding Figure For Edge Flip</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <p>
+              Once we did this, we started by going through each of the preexisting variables and defining then with reference
+              to the relevant half edges. As with the last part, we avoided running on any inputs that were on the boundary.
+              This time, when we created new variables, we
+              also made sure to set their other fields, such as position for vertex, and isNew for edge. We came back while doing part 6 to set isNew to true for the edges we wanted to consider "new"
+              in loop subdivision. Finally, we once again set the neighbors for each of the halfedges, set the halfedges for each of the mesh elements, and returned the new vertex.
+          </p>
+
+          <p><b>The images below show the teapot with some edge splits, as well as some combinations of splits and flips.</b></p>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task5/image1.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original Teapot</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task5/image2.png" align="middle" width="400px" />
+                          <figcaption align="middle">Some Edge Splits</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task5/image3.png" align="middle" width="400px" />
+                          <figcaption align="middle">Edge Splits and Flips</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+
+
+          <h3 align="middle">Part 6: Loop subdivision for mesh upsampling</h3>
+
+          <p>
+              Finally, we implemented loop subdivision for mesh upsampling. As discussed in lecture, this is an efficient way to make meshes higher resolution without doing an unscalable
+              amount of operations on the mesh. We implemented it following along very closely to the instructions in the spec. First, we looped over all vertices of the mesh and computed
+              their new positions using the vertex degree, current position, and centroid. We stored this value in each vertex's "newPosition" field. Next, as said in the spec, we looped
+              over all edges in the mesh and calculated each edge's "newPosition" field, populating these altered edges in a new vector. We now go through each of these edges in the mesh
+              and split them, storing the new position in the vertex returned, while keeping track of new edges through splitEdge. Importantly, we looped through only the edges in the original mesh.
+              At first, we looped through all the edges, which led to an infinite loop, because we would continually split edges we had already split. Finally, we flipped any edge that connected an old
+              and new vertex, which we had set through isNew, and copied the new vertex positions into the proper position field for each vertex in the mesh.
+          </p>
+
+          <p>
+              <b>
+                  The images below show an object over several iterations of subdivision. Notice that the edges of the object become more rounded
+                  as we subdivide more. This technique essentially smooths out the irregularities, which is good for a smooth look, but can
+                  make boundaries and sharp edges less defined in some cases. We explore how to fix this using the cube model.
+              </b>
+          </p>
+
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task6/image13.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original Object</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task6/image14.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 1</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task6/image15.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 2</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <p>
+              <b>
+                  The images below show the cube after several iterations of subdivision. Notice that even after the first iteration, the cube doesn't
+                  look like a cube anymore and takes on a deformed and asymmetric shape.
+              </b>
+          </p>
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task6/image1.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original Cube</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task6/image2.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 1</figcaption>
+                      </td>
+                  </tr>
+                  <tr>
+                      </td>
+                      <td>
+                          <img src="images/task6/image3.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 2</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task6/image4.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 3</figcaption>
+                      </td>
+                  </tr>
+                  <tr>
+                      <td>
+                          <img src="images/task6/image5.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 4</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task6/image6.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 5</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <p>
+              <b>
+                  We can make this cube more symmetric by preprocessing some of the edges. More specifically, we can split any diagonal
+                  edge on the face of the cube as shown in the image below. Notice that as we perform subdivision with these changes,
+                  the cube keeps its cube shape and splits more symmetrically.
+              </b>
+          </p>
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task6/image7.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original Cube</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task6/image8.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 1</figcaption>
+                      </td>
+                  </tr>
+                  <tr>
+                      <td>
+                          <img src="images/task6/image9.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 2</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task6/image10.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 3</figcaption>
+                      </td>
+                  </tr>
+                  <tr>
+                      <td>
+                          <img src="images/task6/image11.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 4</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task6/image12.png" align="middle" width="400px" />
+                          <figcaption align="middle">Iteration 5</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <p>
+              We had quite a debugging journey for this task. At first, it seemed as though the code was stuck in an infinite loop, but
+              after adding some print statements, the code was indeed reaching the end of the function. This was very puzzling because
+              It didn't actually seem to get stuck in any loops, but also wasn't throwing a segfault either. To fix this issue, we went
+              back to tasks 4 and 5 to restructure the code a bit. This helped prevent any variables from being assigned to nonexisting values.
+              After that, we still had some issues. The first issue we dealt with was that the values for the new coordinate points were
+              all being set to {0,0}. After some debugging, we made sure that we were setting the new coordinate values at the correct time and place.
+              The second issue we dealt with was that some of the faces were disappearing. It turns out that this was an issue in the split edge function
+              and that some of the faces weren't being set correctly in the code. After fixing this, our result looked correct! Samples of these errors are shown
+              in the photos below.
+          </p>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="images/task6/image16.png" align="middle" width="400px" />
+                          <figcaption align="middle">Error New Coordinates</figcaption>
+                      </td>
+                      <td>
+                          <img src="images/task6/image17.png" align="middle" width="400px" />
+                          <figcaption align="middle">Holy Cow!</figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <p>https://cal-cs184-student.github.io/sp22-project-webpages-ryurtyn/proj2/index.html</p>
+      </div></body>
 
 </html>
