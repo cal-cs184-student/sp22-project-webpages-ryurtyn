@@ -1,7 +1,479 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-1 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Ruslana Yurtyn & Aryan Agrawal  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3: PathTracer</h1>
+    <h2 align="middle">Ruslana Yurtyn & Aryan Agrawal</h2>
+
+    <div class="padded">
+        <p>
+            This project implements ray tracing using several concepts covered in this unit. We begin by generating rays
+            and defining ray-triangle intersections as well as ray-sphere intersections. Once this is implemented, we can
+            render simple images, but the naive structure is too slow to work well on larger files. To optimize and accelerate
+            the ray tracing algorithm, we implement Bounding Volume Hierarchies and use a tree-like structure to recurse down
+            the different bounding boxes. This significantly increases the speed of rendering these images.
+        </p>
+        <p>
+            We then move on to correctly illuminate the rendered images. First, we implement direct illumination. There are
+            two methods for direct illumination: uniform hemisphere sampling, and importance sampling. Importance sampling
+            focuses its samples on areas that are more difficult to render, so that the simpler areas are focused on less. This
+            way you can get a more clear result with the same amount of samples.
+        </p>
+        <p>
+            We then implement global illumination. global illumination implements direct and indirect illumination, and uses
+            a recursive algorithm to bounce rays through the scene. Each ray is traced until it reaches the max_ray_depth, or
+            until it terminates with a certain probability. In the end, we get a scene that is illuminated both by the direct
+            light as well as the indirect light that is cast by the bouncing rays.
+        </p>
+
+    <h2 align="middle">Part 1: Ray Generation and Intersection</h2>
+        <h3> Ray Generation</h3>
+        <p>In Part 1 Task 1, we implemented ray generation in the generate_ray method of the camera class. In this method,
+            we are given a coordinate pair in image space, which we want to convert into world space. The coordinates in
+            image space are normalized so that each coordinate point falls between the range (0, 0) and (1, 1). To convert
+            to world space, we first convert to camera space, with the origin at (0, 0, 0).  To do this, we arithmetically
+            mapped points on the image space to the 2D plane at z = -1 on the camera space. Then, we converted to world
+            space by using pos as our origin and applying c2w to the directionVector from camera space and normalizing.
+            Finally, we can create a new ray with these values, set the min_t and max_t to nClip and fClip, and return
+            the created Ray. The first time we implemented this, we ran into some issues, which we realized was because
+            we were applying the c2w transformation matrix to pos, which we weren’t supposed to do. Also, we were getting
+            a fully blue image at first when we rendered, but it turned out that was just because we forgot to remove a
+            line of code that rendered a blue image for debugging purposes.
+        </p>
+        <h3>Primitive Intersection</h3>
+        <p>
+            We implemented primitive intersection code in Part 1 tasks 3 and 4. The two kinds of primitives we handled in
+            this project were triangles and spheres. We implemented both parts following along very closely to the spec.
+            On both parts, we implemented has_intersection and intersect, while also implementing a similar method called
+            test for spheres. In both intersect methods, we are given a ray and an Intersection struct, and we populate
+            the struct with the information corresponding to the intersection between the ray and the primitive if such
+            an intersection exists within our time bounds. For the triangle, there is only one possible intersection,
+            since a triangle lies in 2D space. For the sphere, there can be up to 2 unique intersections. In the case in
+            which there are multiple valid intersections between the given ray and a primitive sphere, we pick the earlier
+            valid intersection.
+        </p>
+        <h3>Triange Intersection Algorithm</h3>
+        <p>
+            For triangle intersection, we used the Moller Trumbore algorithm described in class. This algorithm allowed
+            us to minimize the number of calculations required to determine the intersection time and the barycentric
+            coordinates of the triangle. While calculating the intermediate values in Moller Trumbore, we make sure to
+            return false any time the denominator of the scalar multiplier in the equation is 0, because it is in this
+            case that the ray does not intersect with the plane that our triangle primitive lies on at all. If all other
+            cases, we arrive at values for t, b1. And b2/ If t lies outside our valid range, specified by the Ray passed
+            as argument, we return false. Otherwise, we can use b1 and b2 to find the barycentric coordinates of the
+            triangle. Given these, we do our point in triangle test, by checking if any of barycentric coordinate
+            coefficients lie outside the range [0, 1]. If they are all within valid ranges, we know the intersection
+            happens within the triangle, so we fill in all fields of isect and return true.
+        </p>
+        <h3>Normal Shading Examples</h3>
+        <p>
+            Below are several simple images rendered with the algorithms implemented in this part.
+        </p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="images/Task1/1_1_Spheres.png" align="middle" width="400px"/>
+                        <figcaption align="middle">CBSphere.dae rendered in 0.0309s</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/Task1/1_2_CBempty.png" align="middle" width="400px"/>
+                        <figcaption align="middle">CBempty.dae rendered in 0.0425s</figcaption>
+                    </td>
+                </tr>
+                <br>
+                <tr>
+                    <td>
+                        <img src="images/Task1/1_3_banana.png" align="middle" width="400px"/>
+                        <figcaption align="middle">banana.dae rendered in 4.0113s</figcaption>
+                    </td>
+                    <td>
+                        <img src="images/Task1/1_4_cow.png" align="middle" width="400px"/>
+                        <figcaption align="middle">cow.dae rendered in 4.4187s</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+    <h2 align="middle">Part 2: Bounding Volume Hierarchy</h2>
+        <h3>BVH Construction Algorithm</h3>
+            <p>
+                We implemented BVH construction within the construct_bvh method. To do this, we followed the recursive
+                algorithm presented in lecture. First, we went through all the primitives and counted how many there were,
+                all while adding them to a single bounding box. Then, if the number of primitives is fewer than
+                max_leaf_size, we create a leaf node with the created bounding box, set its start and end to the start
+                and end passed in as arguments, and return it. If it’s not a leaf node, we enter the recursive case.
+                Here, we calculate the average of the centroids of the bounding boxes of each primitives, and determine
+                how many centroids are less than and greater than average for each of the x, y, and z dimensions. For
+                whichever dimension has the most even split along the average centroid, we split on that dimension,
+                creating new primitive iterators for start and end for both the left and right child of the current node.
+                Then, we simply set node->l and node->r by recursively calling construct_bvh() with the appropriate iterator
+                pointers (and the same max_leaf_size).
+            </p>
+        <h3>BVH Compared to Naive Algorithm</h3>
+            <p>
+                The difference in rendering times with and without BVH acceleration for complex geometries is unsurprisingly
+                significant. Seeing that such a feature changes runtime from linear O(n) runtime to O(log n) runtime
+                explains why we see such drastic changes. For example, Banana.dae rendered in over 4 seconds prior to
+                implementing BVH acceleration, and in under .1 seconds after. That’s more than a 40x speedup! Dragon.dae
+                saw perhaps the most drastic improvement, seeing that it was one of the most complex of all the geometries
+                we tested. It went from rendering in just under 2 minutes to rendering in around .07 seconds. This really
+                emphasizes the value of BVH acceleration.
+            </p>
+            <p>
+                Here are some images rendered first with the naive implementation, and then with the BVH algorithm with
+                rendering times specified. Notice that the time it takes to render the images with BVH is drastically
+                faster than the original naive implementation. The rendered images look exactly the same, but the BVH tree
+                structure has significantly better rendering speed.
+            </p>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task1/1_4_cow.png" align="middle" width="400px"/>
+                            <figcaption align="middle">cow.dae rendered with naive implementation in 4.4187s</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task2/2_2_cow.png" align="middle" width="400px"/>
+                            <figcaption align="middle">cow.dae rendered with BVH in 0.0334s</figcaption>
+                        </td>
+                    </tr>
+                    <br>
+                    <tr>
+                        <td>
+                            <img src="images/Task1/1_5_dragon.png" align="middle" width="400px"/>
+                            <figcaption align="middle">dragon.dae rendered with naive implementation in 117.6885s</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task2/2_3_dragon.png" align="middle" width="400px"/>
+                            <figcaption align="middle">dragon.dae rendered with BVH in 0.0065 sec</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+
+        <h2 align="middle">Part 3: Direct Illumination</h2>
+            <h3>Direct Lighting</h3>
+            <p>
+                In part 3, task 3, we implemented direct lighting with uniform hemisphere sampling, We did this the same
+                way as walked through in lecture, and following most of the pseudocode presented in the class slides. We
+                sampled num_samples times, keeping track of a running sum of the light incident on the point that the
+                function is called on. Each time, we get a new random ray on the hemisphere extending from the intersection
+                point. We then set the ray’s origin to the point of intersection and the direction to the sampled direction
+                converted to world space. We then use our bvh to determine if the ray intersects with another primitive
+                in our scene. If it does, we calculate the emission of that other primitive and use the function presented
+                in lecture to determine how much lighting that adds to the current primitive. Then, we average the light
+                we’ve summed on this surface and return that value.
+            </p>
+
+            <h3>Light Sampling With Varied Number of Light Rays</h3>
+            <p>
+                The images below show CBbunny.dae rendered with importance sampling. The images use 1, 4, 16, and 64 rays
+                respectively. All images use 1 sample per pixel.
+            </p>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task3/CBbunny_IMP_1_1.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 1 light ray using importance sampling</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task3/CBbunny_IMP_1_4.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 4 light rays using importance sampling</figcaption>
+                        </td>
+                    </tr>
+                    <br>
+                    <tr>
+                        <td>
+                            <img src="images/Task3/CBbunny_IMP_1_16.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 16 light rays using importance sampling</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task3/CBbunny_IMP_1_64.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 64 light rays using importance sampling</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+        <h3>Comparing Hemisphere Sampling and Uniform Sampling</h3>
+            <p>
+                Here we can see a comparison of results with hemisphere sampling and uniform sampling. The images use 1,
+                4, 16, and 64 rays respectively. All images use 1 sample per pixel.
+            </p>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task3/CBbunny_IMP_1_1.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 1 light ray using importance sampling</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task3/CBbunny_H_1_1.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 1 light ray using hemisphere sampling</figcaption>
+                        </td>
+                    </tr>
+                    <br>
+                    <tr>
+                        <td>
+                            <img src="images/Task3/CBbunny_IMP_1_4.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 4 light rays using importance sampling</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task3/CBbunny_H_1_4.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 4 light rays using hemisphere sampling</figcaption>
+                        </td>
+                    </tr>
+                    <br>
+                    <tr>
+                        <td>
+                            <img src="images/Task3/CBbunny_IMP_1_16.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 16 light rays using importance sampling</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task3/CBbunny_H_1_16.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 16 light rays using hemisphere sampling</figcaption>
+                        </td>
+                    </tr>
+                    <br>
+                    <tr>
+                        <td>
+                            <img src="images/Task3/CBbunny_IMP_1_64.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 64 light rays using importance sampling</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task3/CBbunny_H_1_64.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 64 light rays using hemisphere sampling</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <p>
+                Notice that the bunnies rendered with uniform hemisphere sampling are far more grainy than the images with importance sampling.
+                This is because the samples are distributed evenly among the whole image, so lots of samples are wasted on parts of
+                the image that are fairly easy to render. The importance sampling is much more clear because it assigns a higher weight
+                to samples based on their probability distributions. The more likely light rays get more weight and therefore produce
+                a less noisy image.
+            </p>
+
+        <h2 align="middle">Part 4: Global Illumination</h2>
+            <h3>Indirect Lighting</h3>
+            <p>
+                To implement Global Illumination, we began by implementing the function at_least_once_bounce_radiance. This
+                function keeps track of the indirect lighting by tracing recursively through the rays until they reach
+                max_ray_depth. At each level of recursion, we get an estimate of the total radiance and add that to our
+                current sum. Once the recursion reaches a depth of 1, it calls the previously created direct lighting
+                function one_bounce_radium, and then calls zero_bounce_radiance. All of these function calls together estimate
+                the total light that comes from both direct and indirect light rays.
+            </p>
+            <p>
+                An issue that comes with this recursive ray tracing implementation is that it becomes very complex to calculate.
+                The higher the max_ray_depth is, the longer the algorithm takes to terminate. To counteract this, we implement
+                Russian Roulette. This means that a ray can be terminated either when it reaches a max depth of 0, or can
+                terminate with a specified probability of 0.4. As a result, we avoid excessive computation. The difference
+                between terminating rays with a certain probability and letting them all reach a depth of 0 is negligible and
+                does not affect the output in any significant way.
+            </p>
+            <p>
+                Below we can see some samples of images rendered with global illumination. All images are rendered with 1024
+                samples per pixel.
+            </p>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task4/spheres_global_1024.png" align="middle" width="400px"/>
+                            <figcaption align="middle">CBSpheres.dae rendered with global illumination</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task4/bunny_global_1024.png" align="middle" width="400px"/>
+                            <figcaption align="middle">CBbunny.dae rendered with global illumination</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <h3>Comparing Direct, Indirect, and Global Illumination</h3>
+            <p>
+                To get a better understanding of the differences between global, direct, and indirect illumination, the
+                following images show examples of all 3 lighting types with 1024 samples per pixel. Notice that with direct illumination,
+                the shadows created by the spheres are far darker and sharper. Additionally, the ceiling is not lit. This is
+                because all the light is coming only from the light up on the ceiling, so none of the rays directly hit the top.
+                On the flip side, the indirect illumination is dimmer and has less highlights on the spheres. Putting both of these
+                together to make global illumination, you can see that the shadows are softer, but the highlights still appear,
+                creating a more naturally lit image.
+            </p>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task4/spheres_direct_1024.png" align="middle" width="400px"/>
+                            <figcaption align="middle">CBSpheres.dae rendered with direct illumination</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task4/spheres_indirect_1024.png" align="middle" width="400px"/>
+                            <figcaption align="middle">CBSpheres.dae rendered with indirect illumination</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div align="center">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task4/spheres_global_1024.png" align="middle" width="400px"/>
+                            <figcaption align="middle">CBSpheres.dae rendered with global illumination</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <p>
+                It can also be interesting to examine how rendering image with global illumination changes when we change
+                the maximum ray depth. This variable changes the cutoff for how long a single light ray is traced. Below
+                are examples of CBbunny.dae rendered with a max_ray_depth of 1, 2, 4, 8, 16, 64, and 1024. All images are
+                rendered with 1024 samples per pixel.
+                </br>
+                </br>
+                Notice that the difference between a max_ray_depth of 3 and 100 negligible. This is because we have also implemented
+                Russian Roulette. In our algorithm, rays will be terminated with a probability of 0.4, so as we increase the
+                max_ray_depth, the rays still get stopped with the same probability, so the render doesn't have much difference.
+            </p>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task4/bunny_global_depth_0.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with max ray depth of 0</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task4/bunny_global_depth_1.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with max ray depth of 1</figcaption>
+                        </td>
+                    </tr>
+                    <br>
+                    <tr>
+                        <td>
+                            <img src="images/Task4/bunny_global_depth_2.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with max ray depth of 2</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task4/bunny_global_depth_3.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with max ray depth of 3</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div align="center">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task4/bunny_global_depth_100.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with max ray depth of 100</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <p>
+                We can also look at the same scene rendered with different number of samples per pixel including 1, 2,
+                4, 8, 16, 64, and 1024. All images are rendered with 4 light rays. Notice that the image becomes much more
+                clear and smooth as we increase the number of samples per pixel.
+            </p>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task4/bunny_global_1_pixel_sample.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 1 sample pixel</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task4/bunny_global_2_pixel_sample.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 2 sample pixels</figcaption>
+                        </td>
+                    </tr>
+                    <br>
+                    <tr>
+                        <td>
+                            <img src="images/Task4/bunny_global_4_pixel_sample.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 4 sample pixels</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task4/bunny_global_8_pixel_sample.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 2 sample pixels</figcaption>
+                        </td>
+                    </tr>
+                    <br>
+                    <tr>
+                        <td>
+                            <img src="images/Task4/bunny_global_16_pixel_sample.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 16 sample pixels</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task4/bunny_global_64_pixel_sample.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 64 sample pixels</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div align="center">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task4/bunny_global_1024.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with 1024 sample pixels</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+        <h2 align="middle">Part 5: Adaptive Sampling</h2>
+            <p>
+                One final way that we can optimize the illumination algorithm is by implementing adaptive sampling. Our current
+                algorithm will continue to sample pixels without considering whether they have converged or not. This can
+                lead to excessive computation for certain pixels. We use adaptive sampling to estimate whether or not a
+                sample has converged. This convergence is computed by a variable I which is set to 1.96*sigma/mu. We then
+                define a max_tolerance variable, and stop computation if I <= max_tolerance * mu. With this method, once we
+                estimate that a sample has converged, we can stop calculation.
+            </p>
+            <p>
+                We take a certain number of samples for each pixel. As we go through these samples, we keep a running tally of the
+                mean and standard deviation of the pixel. We can then check whether or not the value has converged.
+            </p>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="images/Task5/5_2_bunny.png" align="middle" width="400px"/>
+                            <figcaption align="middle">bunny rendered with adaptive sampling</figcaption>
+                        </td>
+                        <td>
+                            <img src="images/Task5/5_2_bunny_rate.png" align="middle" width="400px"/>
+                            <figcaption align="middle">sampling rate for bunny rendered with adaptive sampling</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        <p>
+            Link to webpage: 
+        </p>
+</div>
+</body>
 </html>
+
+
+
+
