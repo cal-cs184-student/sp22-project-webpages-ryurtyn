@@ -1,7 +1,354 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<style>
+		div.padded {
+			padding-top: 0px;
+			padding-right: 100px;
+			padding-bottom: 0.25in;
+			padding-left: 100px;
+		}
+	</style>
+	<title>Ruslana Yurtyn & Aryan Agrawal  |  CS 184</title>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3-2: PathTracer</h1>
+<h2 align="middle">Ruslana Yurtyn & Aryan Agrawal</h2>
+
+<div class="padded">
+	<p>
+		In this project, we build on the previous project. Having already implemented various ray tracing techniques, we
+		were able to move on to modeling lighting for different materials. Using code from the previous parts, we added on to the
+		BSDF class to create three new types of materials that we could model. Part 1 deals with mirror and glass materials, while
+		Part 2 deals with metallic microfacet materials. With both of these parts implemented, we are able to render images of
+		mirror, glass, glossy metals, and matte metals. Creating functionality to support these different materials
+		primarily takes place in the advanced_bsdf file, where we add on extensions to our original BSDF class.
+	</p>
+	<p>
+		When we began this project, we wanted to implement Depth of Field effect in Part 4 along with the microfacet materials in
+		Part 2. However, because both partners were not able to run the GUI on our local machines, it was not realistic for
+		us to complete and tune the parameters for that part. As a result, we chose to focus on various materials instead of
+		camera focus. Implementing mirror, glass, and metal gave us a good intuition on why materials reflect light in the way
+		that they do, and how light interacts with these various materials.
+	</p>
+	<p>
+		For both parts that we implemented, an important aspect was keeping track of the correct directions of rays that we
+		were tracing through the scene. We also had to keep a close eye on the pdf values since any mistakes with the pdf would
+		drastically change the output image.
+	</p>
+
+	<h2 align="middle">Part 1: Reflection and Refraction</h2>
+	<p>
+		In this part of the project, we implemented the necessary functionality to render mirror and glass objects. This
+		required creating functions that could simulate both reflection and refraction. After fully implementing this part,
+		we could render and image with spheres where one sphere is a mirror, and the other is glass as shown below.
+	</p>
+	<p>
+		Notice that you can tell on the image that the leftmost sphere is a mirror while the rightmost sphere is glass. This
+		is due to the different properties of the two materials. The mirror sphere only reflects light, while the glass
+		sphere reflects and refracts the light rays.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/sphere_depth_100.png" align="middle" width="400px" />
+					<figcaption align="middle">spheres rendered with depth 100</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<h3> Mirror Materials </h3>
+	<p>
+		The first task we had to complete to achieve the desired effect was implementing reflection which creates a mirror
+		effect. To do this, we implemented the BSDF::reflect() function which takes in a ray and reflects it across the
+		normal vector. We also implemented MirrorBSDF::sample_f() which samples rays and utilizes the BSDF::reflect() method
+		to reflect the incoming rays. After implementing this part, we can render images that use a mirror material such as the
+		image of the dragon below.
+	</p>
+	<p>
+		The dragon below was rendered with 1024 samples per pixel, 4 light rays per sample, and a maximum depth of 8.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/dragon.png" align="middle" width="400px" />
+					<figcaption align="middle">render of mirror dragon</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<h3> Glass Materials </h3>
+	<p>
+		We then moved on to modeling glass materials. Glass utilizes both reflection and refraction, so we had to implement
+		refraction on top of the reflection that we had implemented for the previous part. To implement refraction, we used
+		the BSDF::refract() method which takes in a ray wo and refracts it. We also implemented RefractionBSDF::sample_f()
+		which samples rays and refracts them. We had to make sure to check whether or not we have exceeded the Total Internal
+		Reflection, and if we had, we wouldn't refract the ray. This ensures that we don't overcount the amount of light in
+		the object. We can see the refraction at play in CBspheres_refract.dae which only refracts lights and doesn't reflect.
+		Notice that on the sphere, we get refracted light, but we don't have a reflection of the light of at the top of the sphere
+		on the right-hand side. This is because all the light rays are being refracted rather than some of them being reflected.
+		When we combine reflection and refraction, we will achieve a more realistic image with both a distorted image inside
+		the sphere and a highlight at the top of the sphere.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/refracted_sphere.png" align="middle" width="400px" />
+					<figcaption align="middle">render of sphere that refracts light</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		With both reflection and refraction implemented, we were able to move on to modeling glass material. To create glass
+		materials, we need a combination of reflection and refraction. To model whether we should reflect or refract a ray, we
+		use Schlick's approximation to estimate the ratio of reflection to refraction.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/formula1.png" align="middle" width="400px" />
+					<figcaption align="middle">image taken from Wikipedia.com</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		Once we compute Schlick's coefficient R, we reflect with a probability of R, and refract with a probability of (1 - R).
+		This combination of reflection and refraction gives the effect of a glass image. This can be seen in the render of
+		CBlucy.dae below. This image was rendered with 1024 samples per pixel, 4 light rays per sample, and a maximum depth of 8.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/lucy.png" align="middle" width="400px" />
+					<figcaption align="middle">render of glass figure</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<h3>Examples</h3>
+	<p>
+		We can look at the effects of reflection and refraction more closely by modifying the maximum ray depth. We rendered
+		images with max ray depths of 0, 1, 2, 3, 4, 5, and 100. These images are shown below.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/sphere_depth_0.png" align="middle" width="400px" />
+					<figcaption align="middle">spheres rendered with depth 0</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		Notice that with a max ray depth of 0, we get no reflection. The rays never leave the light source and none of the
+		scene is illuminated.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/sphere_depth_1.png" align="middle" width="400px" />
+					<figcaption align="middle">spheres rendered with depth 1</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		With a max ray depth of 1, you can see the scene is illuminated, but the balls aren't reflecting any light at all.
+		The sphere essentially don't show up, and we just see the illumination of the background from the light.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/sphere_depth_2.png" align="middle" width="400px" />
+					<figcaption align="middle">spheres rendered with depth 2</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		With a max ray depth of 2, you can see that the mirror ball is fully reflecting the light that hits it. The glass ball
+		on the other hand, is only partially lit. If you look closely, you can see some shapes inside the ball from the
+		reflection but its definitely not very clear like glass should be. This is because the rays that reflect and refract
+		aren't allowed to bounce enough because they are limited by their depth.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/sphere_depth_3.png" align="middle" width="400px" />
+					<figcaption align="middle">spheres rendered with depth 3</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		With a max ray depth of 3, you can see that the light now fully hits the glass ball. The glass ball is fully lit up
+		and shows the reflection of the scene. However, if you look closely, the reflection of the glass ball inside of the
+		mirror ball is still all black. This is because it takes one additional bounce for light to hit the reflection of the
+		ball. It bounces from the light -> mirror ball -> glass ball, and stops so the light bounces don't reach the
+		reflection within the ball.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/sphere_depth_4.png" align="middle" width="400px" />
+					<figcaption align="middle">spheres rendered with depth 4</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		With a max ray depth of 4, we can finally see that the reflection of the glass ball within the mirror ball is
+		fully colored. 4 bounces is enough to reach that reflection, and we see the reflected ball fully rendered. Another
+		slight difference to be noticed is the illumination at the bottom of the glass ball on the right. With a max depth of 3,
+		the bottom edge of the sphere is not illuminated, but with a max depth of 4, you can see that the light that is reflected
+		onto the floor reflects back on to the sphere and creates a bit of a highlight down on the bottom edge. This highlight
+		is also reflected slightly on to the right side of wall, where you can see a small light circle.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/sphere_depth_5.png" align="middle" width="400px" />
+					<figcaption align="middle">spheres rendered with depth 5</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		The differences between max ray depth of 4 and 5, as well as 5 and 100, are minimal and can not really be noticed.
+		If anything, the small reflected ball inside the mirror is has slightly more highlights, but these
+		differences are negligible overall.
+	</p>
+	<div align="center">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/task1/sphere_depth_100.png" align="middle" width="400px" />
+					<figcaption align="middle">spheres rendered with depth 100</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		Overall, this image seems to stop changing significantly after 4 or 5 bounces. You can see that with each increase
+		of max depth, the rays are allowed to bounce one extra time, so if you have reflections within reflections, they'll
+		become illuminated one at a time as the light is allowed to reflect over and over again.
+	</p>
+	<h2 align="middle">Part 2: Microfacet Material</h2>
+	<p>
+		In this part, we worked to implement microfacet materials. The materials we were modeling were specifically isotropic
+		rough surfaces, so we didn't have to implement refractions. To do this, we started by implementing the BRDF evaluation
+		function in MicrofacetBSDF::f(). To evaluate this function, we needed to implement the normal distribution function, as
+		well as the fresnel term, which we put into the functions MicrofacetBSDF::D() and MicrofacetBSDF::F() respectively.
+		Finally, we implemented importance sampling to sample the microfacet brdf. With all these parts together, we are able to render
+		metallic objects such as the shiny gold dragon shown below.
+	</p>
+	<p>
+		Shown below are 4 versions of CBdragon_microfacet_au.dae. The difference in the images is noted in the
+		alpha values for each dae file. At first glance, there aren't very obvious differences
+		between the images, but internally, the changing alpha values greatly change how the
+		normal distribution function for the microfacets are calculated. Specifically, when the alpha value is
+		orders of magnitude lesser, the denominator of D(h) decreases substantially, increasing the value of D(h). This
+		is most visible when shuffling through the below images, as the reflected light is distributed in different patterns
+		across the scenes.
+	</p>
+	<div align="middle">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/microfacet_dragon_point005.png" align="middle" width="400px" />
+					<figcaption align="middle">alpha = 0.005</figcaption>
+				</td>
+				<td>
+					<img src="images/microfacet_dragon_point05.png" align="middle" width="400px" />
+					<figcaption align="middle">alpha = 0.05</figcaption>
+				</td>
+			</tr>
+			<tr>
+				</td>
+				<td>
+					<img src="images/microfacet_dragon_point25.png" align="middle" width="400px" />
+					<figcaption align="middle">alpha = 0.25</figcaption>
+				</td>
+				<td>
+					<img src="images/microfacet_dragon_point5.png" align="middle" width="400px" />
+					<figcaption align="middle">alpha = 0.5</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		Shown below are two images of CBbunny_microfacet_cu.dae. The first one is rendered using cosine hemisphere
+		sampling, and the second one is importance sampling. As is immediately obvious, the rendering with cosine hemisphere
+		sampling is quite a bit noisier, due to it not being suitable for our Beckmann distribution NDF. Our importance sampling accounts
+		for the shape of the NDF, and therefore is less noisy. We walked through the equations in the spec and implemented them to
+		implement importance sampling.
+	</p>
+	<div align="middle">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/copperbunnywithh.png" align="middle" width="400px" />
+					<figcaption align="middle">Cosine Hemisphere Sampling</figcaption>
+				</td>
+				<td>
+					<img src="images/copperbunnynoh.png" align="middle" width="400px" />
+					<figcaption align="middle">Hemisphere Sampling</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+		With this feature implemented, we are able to input the eta and k values for any metal we choose.
+		Below is the CBdragon_microfacet rendered with a platinum material instead of gold. We did this by changing
+		the eta and k values for our given wavelengths (rgb). Platinum was the obvious choice, seeing that it's my
+		favorite Pokemon game.
+	</p>
+	<div align="middle">
+		<table style="width=100%">
+			<tr>
+				<td>
+					<img src="images/platinum_dragon.png" align="middle" width="400px" />
+					<figcaption align="middle">Cosine Hemisphere Sampling</figcaption>
+				</td>
+			</tr>
+		</table>
+	</div>
+
+
+	<h2 align="middle">Collaboration Details</h2>
+	<p>
+		We mostly worked on this project together by pair programming. We sit together and both write the code on our own laptops
+		synchronously. This time, we ran into some issues with rendering the images. Both partners were not able to use the
+		GUI for this part of the project so we were both working through the Hive machines. This made workflow much slower
+		and more tedious. We worked on Part 2 together first, and were able to finish it fairly quickly. We then started on
+		Part 4 and worked on that part both synchronously and asynchronously. After working on it for more than three days
+		with little progress, we decided to switch to Part 1, and were able to finish that part fairly quickly synchronously.
+		We also split up the work for the writeup since there were two parts to write about and two of us. Overall, working together
+		is a great experience because we both bring unique perspectives to the table.
+	</p>
+	<p>
+		Link to webpage: https://cal-cs184-student.github.io/sp22-project-webpages-ryurtyn/proj3-2/index.html
+	</p>
+</div>
+</body>
 </html>
+
+
+
+
