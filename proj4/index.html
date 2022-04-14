@@ -1,7 +1,477 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 4 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2022</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">Ruslana Yurtyn & Aryan Agrawal, CS184</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p> In this project, we build a cloth simulator that responds to forces and other objects in real time. 
+    To represent the cloth, we approximated it as an array of point masses connected by various types of springs. Then 
+    we just had to simulate the motion of the point masses and springs to arrive at our first simulation of the cloth.
+    To compute and display the motion of the cloth, we used Verlet integration to determine the effects of the forces
+    in the scene on each point mass in our cloth. We also implemented functionality that handles collisions with other
+    objects, specifically spheres and planes. To do this, we just alter the position of any point mass that enters or
+    crosses this other object so that it is correct. This extended into implementing self-collisions, when point masses
+    within the cloth collide with themselves. Finally, we implemented shaders using GLSL. With this new technique for
+    defining fragments, we implemented diffuse and Blinn-Phong shading from lecture, and then expanded it to texture
+    mapping, displacement/bump mapping, and environment-mapped reflections.</p>
+
+<h2 align="middle">Part I: Masses and springs</h2>
+
+<p> For part 1, we implemented build_grid in cloth.cpp. This function serves to create a grid of point masses and springs
+    that represent the initial cloth. We did this by first creating num_width_points * num_height_points point masses,
+    spaced evenly across our cloth's width and height. We stored these values in the provided point_masses attribute of
+    the Cloth struct in row-major order. Then, we created springs of three different types to connect these point masses.
+    Structural springs connect a point mass to the point masses directly to the left and above it, shearing constraints
+    connect a point mass to its top left and top right, and bending constraints connect a point mass to the mass two above
+    it and the one two to the left. While we were implementing this part, it was important to make sure that we considered
+    all edge cases so that we did not ever attempt to access memory out of bounds. Finally, we store each spring into
+    the corresponding attribute of the cloth struct, in arbitrary order.</p>
+
+    <p>
+        One issue we ran into was that when we were looping over our point masses to add our springs was we were creating a
+    new pointer to the point mass in local memory, and then trying to use that pointer address to create the spring.
+    This would result in us creating springs with the wrong addresses for point masses, and lead to a segfault.
+    We fixed this by directly getting the address of the pointer in the array instead of creating a temporary variable.
+    </p>
+
+    <p>
+        The image below shows the generated grid with all constraints enabled.
+    </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task1/pinned2-all-constraints.png" align="middle" width="400px" />
+                    <figcaption align="middle">grid with all springs enabled</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <p>
+        Now the images below show the same grid, but first with no shearing springs, and then with just shearing springs.
+        Notice that you can see the springs that take care of the diagonal constraints. The shearing constraint takes care
+        of diagonal connections.
+    </p>
+
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task1/pinned2-shear-only.png" align="middle" width="400px" />
+                    <figcaption align="middle">only the shearing constraint is enabled.</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task1/pinned2-no-shear.png" align="middle" width="400px" />
+                    <figcaption align="middle">shearing constraint is disabled.</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+<h2 align="middle">Part II: Simulation via Numerical Integration</h2>
+    <p>
+        For part 2, we integrated motion equations to apply forces to the point masses in our cloth. We did this by
+        implementing simulate in cloth.cpp. To do this, we first summed the total external forces applied by looping
+        over all the external accelerations and multiplying them by mass. Next, we set the forces of every point mass in
+        our cloth equal to the total_external_force we just calculated. Next, we used Verlet integration as presented in
+        the spec to update the position of each point mass given the parameters and the previous position of the mass.
+        Finally, we constrained the changes so that the springs do not change too much in any one time step. If the
+        distance between any two connected point masses was determined to be too large, each of them was moved
+        towards each other if they were both unpinned. If they were not both unpinned, only the unpinned point mass was
+        moved.
+    </p>
+    <p>
+        The image below shows the cloth resulting from this implementation. One image has 2 pinned points while the other
+        one has 4 pinned points.
+    </p>
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task2/pinned2.png" align="middle" width="400px" />
+                    <figcaption align="middle">2 points pinned.</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task2/pinned4.png" align="middle" width="400px" />
+                    <figcaption align="middle">4 points pinned.</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        Let's consider what happens to the simulation when we alter some of the parameters in this calculation. When we
+        decrease the spring constant, we see the cloth has less structural integrity, more visible ripples, and looks
+        like a lighter piece of fabric. With an increased spring constant, there is much more structural integrity, no
+        visible vertical ripples, and less movement overall because the springs are moving much less. It looks like a heavy
+        fabric. When we increase the density, the cloth folds over itself more easily, with lots of movement within the cloth.
+        Lowering the density does the opposite, resulting in a flat cloth. Finally, higher damping value makes the cloth
+        come to rest much faster, while lower damping values results in the cloth swinging back and forth much more before
+        coming to rest.
+    </p>
+
+<h2 align="middle">Part III: Handling Collisions with other objects</h2>
+    <p>
+        For part 3, we handled the cloth's collisions with spheres and planes. To do this, we implemented both Sphere::collide
+        and Plane::collide. Both functions take in a point mass and adjust its position if it is inside the sphere or passes
+        through the plane. To do this we just had to do a little vector arithmetic for the point-in-sphere and point crossed
+        plane tests, and then follow the spec on how to adjust the position of the point mass if it did collide. At first,
+        our point-in-plane collision didn't work as expected, but we fixed it by double checking our vector math to fix
+        the new position of the point mass.
+    </p>
+    <p>
+        One bug we encountered was that the cloth slid across the plane after landing on it. This was because we were adding
+        the SURFACE_OFFSET variable direectly, but what we actually needed to do was add SURFACE_OFFSET * normal. This fix
+        stopped the cloth from sliding off the plane in that way.
+    </p>
+    <p>
+        Below are examples of the cloth colliding with a sphere as well as resting on a plane.
+    </p>
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task3/sphere_ks_5000.png" align="middle" width="400px" />
+                    <figcaption align="middle">cloth on sphere.</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task3/plane_resting.png" align="middle" width="400px" />
+                    <figcaption align="middle">cloth on plane.</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        We can also look at how the ks spring constant changes the look of the cloth when it collides with the object.
+        Below are examples of ks = 500, 5000, and 50000 respectively.
+    </p>
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task3/sphere_ks_500.png" align="middle" width="400px" />
+                    <figcaption align="middle">ks = 500</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task3/sphere_ks_5000.png" align="middle" width="400px" />
+                    <figcaption align="middle">ks = 5,000</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task3/sphere_ks_50000.png" align="middle" width="400px" />
+                    <figcaption align="middle">ks = 50,000</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        The higher the spring constant value, the more strong the springs are, meaning the cloth has less motion and is
+        more rigid overall. The cloth with ks = 500 is very thin-looking and drapes easily over the sphere. With ks = 50000,
+        the cloth looks thicker and drapes less smoothly over the sphere.
+    </p>
+
+<h2 align="middle">Part IV: Handling self-collisions</h2>
+    <p>
+        To implement self-collisions in part 4, we use spatial hashing to group each point mass into a bin with point
+        masses we determine to be "close" to it. Then, in cloth::self_collide, we can take a point mass and use the
+        populated hash_table to determine which other point masses it is close to. We can loop over these
+        "potential collisions" and determine if they are within a certain distance apart. If they're what we define to
+        be too close, we can correct the location of these point masses to move them further apart.
+    </p>
+
+    <p>
+        We can once again vary the values of the parameters when viewing this test in the GUI to determine how they alter
+        the final product. Like before, increasing the density causes the cloth to have more folds and ripples, while
+        decreasing the density does the opposite. Also, increasing the spring constant makes the cloth fold over itself
+        less and there are fewer visible waves in the cloth itself. Decreasing the spring constant has the opposite effect.
+    </p>
+    <p>
+        The sets of images below show the cloth falling on itself with different density values. density values used are
+        1.5, 15, and 150.
+    </p>
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task4/1_5_1.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 1.5</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task4/1_5_2.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 1.5</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task4/1_5_3.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 1.5</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task4/1_5_4.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 1.5</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task4/15_1.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 15</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task4/15_2.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 15</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task4/15_3.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 15</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task4/15_4.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 15</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task4/150_1.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 150</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task4/150_2.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 150</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task4/150_3.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 150</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task4/150_4.png" align="middle" width="200px" />
+                    <figcaption align="middle">density = 150</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        Notice that with density of 1.5, the cloth is far smoother. The folds of the cloth are stiffer, and it has more
+        structure. As the density gets bigger, the cloth has more wrinkles in it and produces more folds.
+    </p>
+
+<h2 align="middle">Part V: Shaders</h2>
+    <p>
+        For part 5, we pivot to writing GLSL shaders. We work with both vertex and fragment shaders, but most of the code
+        we write is for fragment shaders. The output of the vertex shader is used as the input to the fragment shaders
+        we write. First, we wrote a simple fragment shader for diffuse lighting. We simply take our inputs, follow the
+        formula from lecture, and output. One hurdle we ran into here was determining what values to use for our parameter
+        kd, and later in part 5, what values to use for other hyperparameters. At the end of the day, we ended up achieving
+        the results we wanted by tinkering with different combinations of these hyperparameters until we got some that
+        resulted in the outputs we wanted. Another thing we had to think about while debugging our output for task 1 was
+        normalizing vectors. In order to get our output to match what we saw on the spec, we realized we had to normalize
+        the normal vector that we were using. We also fixed a bug by realizing we can quickly get the magnitude of any
+        vector var in GLSL by using the built-in length function.
+    </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task5/diffuse.png" align="middle" width="400px" />
+                    <figcaption align="middle">Diffuse shading.</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        For part 5 task 2, we implemented Blinn-Phong shading. This was an extension of task 1, and we implemented it
+        following the equation presented in lecture. We had to test what hyperparameters worked best, and once again
+        we normalized our normal vectors (and a couple others) to get the exact results we wanted. For the specular light
+        component, we realized what effect increasing and decreasing p and h had, and we were able to use that to get the
+        specular lighting to look exactly how we wanted.
+    </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task5/phong.png" align="middle" width="400px" />
+                    <figcaption align="middle">Blinn-Phong shading.</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        To better illustrate the implementation of Blinn-Phong shading, we can take a look at each individual component.
+        There's the specular, ambinet, and diffuse component, and putting those all together creates the glint effect
+        we desire.
+    </p>
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task5/phong_ambient.png" align="middle" width="200px" />
+                    <figcaption align="middle">Ambient light only.</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task5/phong_diffuse.png" align="middle" width="200px" />
+                    <figcaption align="middle">Diffuse light only.</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task5/phong_specular.png" align="middle" width="200px" />
+                    <figcaption align="middle">Specular light only.</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task5/phong_all.png" align="middle" width="200px" />
+                    <figcaption align="middle">All light combined.</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        Task 3 we finished rather quickly. We simply sampled the texture at the given location u, v and set the color we
+        got from the texture to the output color. It was very satisfying.
+    </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task5/texture_new.png" align="middle" width="400px" />
+                    <figcaption align="middle">Texture shading.</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        Task 4 involved implementing a bumpy texture. We followed the equations in the spec pretty closely. First we
+        created the tangent-bitangent-normal matrix (TBN matrix). We also created a function h(u,v) that returns the height
+        encoded by a height map. When we input certain coordinates, we get the height that we want that part to be at. Using
+        this h function, we're able to find the change in u and v and create our local space normal. Using this normal and
+        the TBN matrix, we can find the normal of the displaced model space. After implementing this, we can see the bumps
+        on the sphere.
+    </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task5/bump.png" align="middle" width="400px" />
+                    <figcaption align="middle">Bump shading.</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task5/bump_sphere.png" align="middle" width="400px" />
+                    <figcaption align="middle">Bump shading on sphere.</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        The next part of task 4 was displacement mapping. This allowed the bumps to actually change the
+        motion of the cloth and be impacted more by the bumps. To do this, we had to edit the Displacement.vert
+        file to slightly change the vertex positions. We used the equation in the spec to find new p values which
+        edits the position of the points on the image. The cloth has a more textured look as a result.
+    </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task5/displace.png" align="middle" width="400px" />
+                    <figcaption align="middle">Displacement shading.</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task5/displace_sphere.png" align="middle" width="400px" />
+                    <figcaption align="middle">Displacement shading on sphere.</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        We can see the bump and displacement with different resolutions. The first set of images has 16x16 resolution, and
+        the second set has 128x128 resolution.
+    </p>
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task5/bump_16.png" align="middle" width="400px" />
+                    <figcaption align="middle">Bump with 16x16 resolution</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task5/displacement_16.png" align="middle" width="400px" />
+                    <figcaption align="middle">Displace with 16x16 resolution</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div align="middle">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task5/bump_128.png" align="middle" width="400px" />
+                    <figcaption align="middle">Bump with 128x128 resolution</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task5/displacement_128.png" align="middle" width="400px" />
+                    <figcaption align="middle">Displace with 128x128 resolution</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        the higher resolution images have more clear patterns and look smoother and sharper.
+    </p>
+    <p>
+        Task 5 was similar to task 3, but instead of sampling from the image texture, we determined what the reflected eye
+        ray was and then sampled from the appropriate texture.
+    </p>
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td>
+                    <img src="writeup-photos/task5/mirror.png" align="middle" width="400px" />
+                    <figcaption align="middle">Mirror shading.</figcaption>
+                </td>
+                <td>
+                    <img src="writeup-photos/task5/mirror_sphere.png" align="middle" width="400px" />
+                    <figcaption align="middle">Mirror shading on sphere.</figcaption>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <p>
+        Webpage link: https://cal-cs184-student.github.io/sp22-project-webpages-ryurtyn/proj4/index.html
+    </p>
+
+</body>
 </html>
